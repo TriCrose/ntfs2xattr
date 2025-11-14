@@ -5,6 +5,7 @@ import datetime
 import sys
 import shutil
 import logging
+import csv
 from typing import List, Optional, Tuple
 
 NTFS_CRTIME_ATTR_SRC = "system.ntfs_crtime"   # from NTFS
@@ -168,17 +169,25 @@ def setup_logger(script_name: str, enabled: bool) -> Optional[logging.Logger]:
     if not enabled:
         return None
 
+    # Create logs directory if it doesn't exist
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+
+    # Generate timestamp-based filename
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S.%f")
+    log_filename = os.path.join(logs_dir, f"{timestamp}.log")
+
     logger = logging.getLogger("ntfs_copy_logger")
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
 
-    info_handler = logging.FileHandler(script_name + ".INFO.log", "a", "utf-8")
-    info_handler.setLevel(logging.INFO)
-    info_handler.setFormatter(logging.Formatter("[%(asctime)s - %(levelname)s] %(message)s"))
-    logger.addHandler(info_handler)
+    handler = logging.FileHandler(log_filename, "w", "utf-8")
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter("[%(asctime)s - %(levelname)s] %(message)s"))
+    logger.addHandler(handler)
 
     cmdline = " ".join(sys.argv)
-    now = datetime.datetime.now()
     logger.info(f"Command: {cmdline}")
     logger.info(f"Run at {now:%H:%M:%S} on {now:%Y/%m/%d}")
     return logger
@@ -199,35 +208,51 @@ def walk_and_copy(src_dir: str, dest_dir: str,
 
     print(f"{YELLOW}Extracting NTFS creation times{RESET}")
 
-    for i, src_path in enumerate(files):
-        rel = os.path.relpath(src_path, src_dir)
-        dst_path = os.path.join(dest_dir, rel)
-        dt, raw_hex, raw_bytes = get_ntfs_crtime_with_raw(src_path)
-        readable_ts = format_timestamp_local(dt) if dt else "N/A"
-        raw_ts_for_log = raw_hex or "N/A"
-        try:
-            os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-            shutil.copy2(src_path, dst_path)
-            # Add xattrs
-            if raw_bytes:
-                try:
-                    os.setxattr(dst_path, NTFS_CRTIME_ATTR_DST, raw_bytes)
-                    os.setxattr(dst_path, NTFS_CRTIME_ATTR_READABLE,
-                                readable_ts.encode("utf-8"))
-                except OSError as e:
-                    if logger:
-                        logger.warning(
-                            f"'{dst_path}': failed to set xattr: {e}")
-            if logger:
-                logger.info(
-                    f"'{src_path}' --> '{dst_path}'  "
-                    f"with timestamp {raw_ts_for_log} ({readable_ts})")
-            update_progress(i, total, rel, readable_ts)
-        except Exception as e:
-            print(f"{WHITE}'{rel}'{RESET}{RED} failed to copy: {RESET}{WHITE}{e}{RESET}")
-            if logger:
-                logger.error(f"'{src_path}' failed to copy: {e}")
-            update_progress(i, total, "", None)
+    # Create CSV file in destination directory
+    csv_path = os.path.join(dest_dir, "timestamps.csv")
+    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(['file', 'timestamp', 'timestamp_str', 'copy_successful', 'xattr_successful'])
+
+        for i, src_path in enumerate(files):
+            rel = os.path.relpath(src_path, src_dir)
+            dst_path = os.path.join(dest_dir, rel)
+            dt, raw_hex, raw_bytes = get_ntfs_crtime_with_raw(src_path)
+            readable_ts = format_timestamp_local(dt) if dt else "N/A"
+            raw_ts_for_log = raw_hex or "N/A"
+            copy_successful = "no"
+            xattr_successful = "no"
+            try:
+                os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                shutil.copy2(src_path, dst_path)
+                copy_successful = "yes"
+                # Add xattrs
+                if raw_bytes:
+                    try:
+                        os.setxattr(dst_path, NTFS_CRTIME_ATTR_DST, raw_bytes)
+                        os.setxattr(dst_path, NTFS_CRTIME_ATTR_READABLE,
+                                    readable_ts.encode("utf-8"))
+                        xattr_successful = "yes"
+                    except OSError as e:
+                        if logger:
+                            logger.warning(
+                                f"'{dst_path}': failed to set xattr: {e}")
+                else:
+                    # No raw_bytes means no NTFS timestamp available
+                    xattr_successful = "N/A"
+                if logger:
+                    logger.info(
+                        f"'{src_path}' --> '{dst_path}'  "
+                        f"with timestamp {raw_ts_for_log} ({readable_ts})")
+                update_progress(i, total, rel, readable_ts)
+            except Exception as e:
+                print(f"{WHITE}'{rel}'{RESET}{RED} failed to copy: {RESET}{WHITE}{e}{RESET}")
+                if logger:
+                    logger.error(f"'{src_path}' failed to copy: {e}")
+                update_progress(i, total, "", None)
+            finally:
+                # Write to CSV regardless of success/failure
+                csv_writer.writerow([rel, raw_ts_for_log, readable_ts, copy_successful, xattr_successful])
 
     sys.stdout.write("\n")
     verify_target_count(dest_dir, total, logger, verify)
