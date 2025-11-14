@@ -174,18 +174,13 @@ def setup_logger(script_name: str, enabled: bool) -> Optional[logging.Logger]:
 
     info_handler = logging.FileHandler(script_name + ".INFO.log", "a", "utf-8")
     info_handler.setLevel(logging.INFO)
-    info_handler.setFormatter(logging.Formatter("%(message)s"))
-    warn_handler = logging.FileHandler(script_name + ".WARN.log", "a", "utf-8")
-    warn_handler.setLevel(logging.WARNING)
-    warn_handler.setFormatter(logging.Formatter("%(message)s"))
+    info_handler.setFormatter(logging.Formatter("[%(asctime)s - %(levelname)s] %(message)s"))
     logger.addHandler(info_handler)
-    logger.addHandler(warn_handler)
 
     cmdline = " ".join(sys.argv)
     now = datetime.datetime.now()
     logger.info(f"Command: {cmdline}")
     logger.info(f"Run at {now:%H:%M:%S} on {now:%Y/%m/%d}")
-    logger.info("")
     return logger
 
 
@@ -251,6 +246,9 @@ def main():
 
     if not os.path.isdir(args.src):
         sys.exit(f"Error: '{args.src}' is not a directory")
+
+    if os.path.exists(args.dest):
+        sys.exit(f"'{args.dest}' directory already exists. Please specify an empty directory.")
 
     script_name = os.path.basename(sys.argv[0]) or "script"
     logger = setup_logger(script_name, not args.no_log)
