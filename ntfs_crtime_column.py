@@ -3,7 +3,7 @@ import os
 import urllib.parse
 import datetime
 
-from gi.repository import GObject, Nemo, Gtk
+from gi.repository import GObject, Nemo, Gtk, Gdk
 
 # xattr names
 ATTR_RAW = "user.ntfs_crtime"
@@ -123,7 +123,7 @@ class NTFSCRTimeExtension(GObject.GObject,
     # === PropertyPageProvider ===
     def get_property_pages(self, files):
         """
-        Create a "Date Created (NTFS)" tab in the Properties dialog
+        Create an "Extended Attributes" tab in the Properties dialog
         when a single local file is selected.
         """
         if not files or len(files) != 1:
@@ -135,23 +135,68 @@ class NTFSCRTimeExtension(GObject.GObject,
 
         uri = file.get_uri()
         path = urllib.parse.unquote(uri[7:])
-        value = get_ntfs_crtime_string(path)
 
-        if not value:
+        # Get all extended attributes
+        try:
+            xattr_names = os.listxattr(path)
+        except OSError:
             return
 
-        # Simple vertical box with a label inside
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_border_width(6)
+        if not xattr_names:
+            return
 
-        label = Gtk.Label(label=value)
-        label.set_xalign(0.0)  # left-align
-        box.pack_start(label, False, False, 0)
+        property_label = Gtk.Label("Extended Attributes")
+        property_label.show()
+
+        # Create a scrolled window
+        scrolled_window = Gtk.ScrolledWindow()
+        scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled_window.set_size_request(400, 200)
+
+        # Create a TreeView with ListStore
+        list_store = Gtk.ListStore(str, str, str)  # Name, Value (str), Value (hex)
+
+        for attr_name in sorted(xattr_names):
+            try:
+                attr_value = os.getxattr(path, attr_name)
+                value_hex = "0x" + attr_value.hex()
+                try:
+                    value_str = attr_value.decode('utf-8')
+                except UnicodeDecodeError:
+                    value_str = "<binary data>"
+                list_store.append([attr_name, value_str, value_hex])
+            except OSError:
+                continue
+
+        tree_view = Gtk.TreeView(model=list_store)
+        tree_view.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+
+        # Create columns
+        renderer_name = Gtk.CellRendererText()
+        column_name = Gtk.TreeViewColumn("Name", renderer_name, text=0)
+        column_name.set_resizable(True)
+        column_name.set_min_width(150)
+        tree_view.append_column(column_name)
+
+        renderer_str = Gtk.CellRendererText()
+        column_str = Gtk.TreeViewColumn("Value (str)", renderer_str, text=1)
+        column_str.set_resizable(True)
+        column_str.set_min_width(150)
+        tree_view.append_column(column_str)
+
+        renderer_hex = Gtk.CellRendererText()
+        column_hex = Gtk.TreeViewColumn("Value (hex)", renderer_hex, text=2)
+        column_hex.set_resizable(True)
+        column_hex.set_min_width(150)
+        tree_view.append_column(column_hex)
+
+        scrolled_window.add(tree_view)
+        scrolled_window.show_all()
 
         page = Nemo.PropertyPage(
-            name="NemoPython::ntfs_crtime_properties",
-            label="Date Created (NTFS)",
-            page=box,
+            name="NemoPython::xattr_properties",
+            label=property_label,
+            page=scrolled_window,
         )
         return [page]
 
