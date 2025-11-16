@@ -3,7 +3,7 @@ A couple of scripts to make the process of moving from Windows to Linux just a l
 
 `ntfs2xattr.py` copies a directory from an NTFS-formatted volume to ext4 while preserving the crtime (NTFS-only) by adding it as an extended attribute to each file. It actually adds two xattrs:
 * `user.ntfs_crtime`: the raw NTFS timestamp, defined as the number of 100-nanosecond intervals since 00:00 January 1, 1601 UTC (see https://learn.microsoft.com/en-gb/windows/win32/sysinfo/file-times);
-* `user.ntfs_crtime_readable`: a human-readable string representation of that timestamp (e.g. "22nd January 1998").
+* `user.ntfs_crtime_readable`: ISO 8601 string representation of that timestamp (e.g. "1998-01-22 00:00:00").
 
 `nemo-ntfs2xattr.py` is an extension for the [Nemo](https://github.com/linuxmint/nemo) file manager that does two things:
 * Adds a new property page called "Extended Attributes" to the file properties window that shows a list of all xattrs on the file;
@@ -37,7 +37,7 @@ nemo -q
 ```
 
 ## Usage
-First off, let's take a look at the output of `python ntfs2xattr.py -h`:
+Looking at the output of `python ntfs2xattr.py -h`:
 ```
 usage: ntfs2xattr.py [-h] --src SRC --dest DEST [--no-log] [--no-verify]
 
@@ -50,16 +50,17 @@ options:
   --no-log     Disable logging
   --no-verify  Disable verification of file count
 ```
-
-- explain command-line arguments
-- output & logging
-- common issues and verification
-    - files not copying
-    - how to check which files didn't copy (grepping logs for ERROR/WARNING)
-
-Also, if you install the `xattr` package (`sudo apt install xattr`), you can view extended attributes in the terminal with `xattr -l <file>`:
+It's fairly self-explanatory. As an example, your command could look something like:
 ```
-~ > xattr -l Documents/novel.docx
+python3 ntfs2xattr.py --src /media/windows/7826D16A26D129C0/Users/John/Documents --dest ~/Documents
+```
+Upon running the script, it first counts the number of files in the source directory (used for the verification step at the end), before then beginning to copy all the files and set the xattr on each one. It prints the name and the extracted timestamp both to the terminal (with a progress bar along the bottom) and to a local `.log` file in the `logs/` directory. Each invocation of the script gets its own log file in this directory with a filename corresponding to the time of invocation.
+
+Once copying is finished, the number of files in the target directory is counted and compared with the original source count. If they do not match, the script will print out the name of each file that didn't copy as well as the associated error message. This information is also available in the logs (try `grep`ing for "WARNING" or "ERROR"). The most common cases of failed copies, however, are Windows system files that don't play well with the Linux environment or that behave strangely due to quirks of the OS. Your personal documents, images, videos etc. are unlikely to have any issues.
+
+Aside from using the Nemo extension, you can also inspect the extended attributes from the command-line using the `xattr` package (`sudo apt install xattr`):
+```
+~/Documents$ xattr -l Documents/novel.docx
 user.ntfs_crtime:
 0000   DE C1 13 61 78 51 DC 01                            ...axQ..
 
