@@ -57,7 +57,7 @@ options:
     - files not copying
     - how to check which files didn't copy (grepping logs for ERROR/WARNING)
 
-Also, if you install the `attr` package (`sudo apt install attr`), you can view extended attributes in the terminal with `xattr -l <file>`:
+Also, if you install the `xattr` package (`sudo apt install xattr`), you can view extended attributes in the terminal with `xattr -l <file>`:
 ```
 ~ > xattr -l Documents/novel.docx
 user.ntfs_crtime:
