@@ -5,7 +5,7 @@ A couple of scripts to make the process of moving from Windows to Linux just a l
 
 `ntfs2xattr.py` copies a directory from an NTFS-formatted volume to ext4 while preserving the crtime (NTFS-only) by adding it as an extended attribute to each file. It actually adds two xattrs:
 * `user.ntfs_crtime`: the raw NTFS timestamp, defined as the number of 100-nanosecond intervals since 00:00 January 1, 1601 UTC (see https://learn.microsoft.com/en-gb/windows/win32/sysinfo/file-times);
-* `user.ntfs_crtime_readable`: ISO 8601 string representation of that timestamp (e.g. "1998-01-22 00:00:00").
+* `user.ntfs_crtime_readable`: the timestamp formatted as an ISO 8601 string (e.g. "1998-01-22 00:00:00").
 
 `nemo-ntfs2xattr.py` is an extension for the [Nemo](https://github.com/linuxmint/nemo) file manager that does two things:
 * Adds a new property page called "Extended Attributes" to the file properties window that shows a list of all xattrs on the file;
@@ -54,7 +54,7 @@ options:
 ```
 For example:
 ```
-python3 ntfs2xattr.py --src /media/windows/7826D16A26D129C0/Users/John/Documents --dest ~/Documents
+python3 ntfs2xattr.py --src /mnt/windows/Users/John/Documents --dest ~/Documents
 ```
 Each invocation of the script creates a separate log file (in `logs/`) whose filename corresponds to the time of invocation. All of the information printed to the terminal is also written to the logs (in more detail), so it's worth keeping the log files around even after the copy is complete. Log lines have an associated log level (`INFO`, `WARNING` or `ERROR`), making it trivial to, for example, `grep` for all error or warning lines.
 
