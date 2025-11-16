@@ -5,7 +5,6 @@ import datetime
 import sys
 import shutil
 import logging
-import csv
 from typing import List, Optional, Tuple
 
 NTFS_CRTIME_ATTR_SRC = "system.ntfs_crtime"   # from NTFS
@@ -208,54 +207,57 @@ def walk_and_copy(src_dir: str, dest_dir: str,
 
     print(f"{YELLOW}Extracting NTFS creation times{RESET}")
 
-    # Create CSV file in destination directory
-    csv_path = os.path.join(dest_dir, "timestamps.csv")
-    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(['file', 'timestamp', 'timestamp_str', 'copy_successful', 'xattr_successful'])
+    # Track failures
+    copy_failures = []  # List of (rel_path, error_message)
+    xattr_failures = []  # List of rel_path that copied but failed xattr
 
-        for i, src_path in enumerate(files):
-            rel = os.path.relpath(src_path, src_dir)
-            dst_path = os.path.join(dest_dir, rel)
-            dt, raw_hex, raw_bytes = get_ntfs_crtime_with_raw(src_path)
-            readable_ts = format_timestamp_local(dt) if dt else "N/A"
-            raw_ts_for_log = raw_hex or "N/A"
-            copy_successful = "no"
-            xattr_successful = "no"
-            try:
-                os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-                shutil.copy2(src_path, dst_path)
-                copy_successful = "yes"
-                # Add xattrs
-                if raw_bytes:
-                    try:
-                        os.setxattr(dst_path, NTFS_CRTIME_ATTR_DST, raw_bytes)
-                        os.setxattr(dst_path, NTFS_CRTIME_ATTR_READABLE,
-                                    readable_ts.encode("utf-8"))
-                        xattr_successful = "yes"
-                    except OSError as e:
-                        if logger:
-                            logger.warning(
-                                f"'{dst_path}': failed to set xattr: {e}")
-                else:
-                    # No raw_bytes means no NTFS timestamp available
-                    xattr_successful = "N/A"
-                if logger:
-                    logger.info(
-                        f"'{src_path}' --> '{dst_path}'  "
-                        f"with timestamp {raw_ts_for_log} ({readable_ts})")
-                update_progress(i, total, rel, readable_ts)
-            except Exception as e:
-                print(f"{WHITE}'{rel}'{RESET}{RED} failed to copy: {RESET}{WHITE}{e}{RESET}")
-                if logger:
-                    logger.error(f"'{src_path}' failed to copy: {e}")
-                update_progress(i, total, "", None)
-            finally:
-                # Write to CSV regardless of success/failure
-                csv_writer.writerow([rel, raw_ts_for_log, readable_ts, copy_successful, xattr_successful])
+    for i, src_path in enumerate(files):
+        rel = os.path.relpath(src_path, src_dir)
+        dst_path = os.path.join(dest_dir, rel)
+        dt, raw_hex, raw_bytes = get_ntfs_crtime_with_raw(src_path)
+        if dt is None and logger:
+            logger.warning(f"'{src_path}': no NTFS creation time found")
+        readable_ts = format_timestamp_local(dt) if dt else "N/A"
+        raw_ts_for_log = raw_hex or "N/A"
+        try:
+            os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+            shutil.copy2(src_path, dst_path)
+            # Add xattrs
+            if raw_bytes:
+                try:
+                    os.setxattr(dst_path, NTFS_CRTIME_ATTR_DST, raw_bytes)
+                    os.setxattr(dst_path, NTFS_CRTIME_ATTR_READABLE,
+                                readable_ts.encode("utf-8"))
+                except OSError as e:
+                    xattr_failures.append(rel)
+                    if logger:
+                        logger.error(
+                            f"'{dst_path}': failed to set xattr: {e}")
+            if logger:
+                logger.info(
+                    f"'{src_path}' --> '{dst_path}'  "
+                    f"with timestamp {raw_ts_for_log} ({readable_ts})")
+            update_progress(i, total, rel, readable_ts)
+        except Exception as e:
+            copy_failures.append((rel, str(e)))
+            print(f"{WHITE}'{rel}'{RESET}{RED} failed to copy: {RESET}{WHITE}{e}{RESET}")
+            if logger:
+                logger.error(f"'{src_path}' failed to copy: {e}")
+            update_progress(i, total, "", None)
 
     sys.stdout.write("\n")
     verify_target_count(dest_dir, total, logger, verify)
+
+    # Print error summary
+    if copy_failures:
+        print(f"\n{YELLOW}Files that failed to copy:{RESET}")
+        for rel_path, error_msg in copy_failures:
+            print(f"{RED}{rel_path}{RESET}{WHITE} {error_msg}{RESET}")
+
+    if xattr_failures:
+        print(f"\n{YELLOW}Files that copied successfully but failed to set xattr:{RESET}")
+        for rel_path in xattr_failures:
+            print(f"{RED}{rel_path}{RESET}")
 
 
 def main():
