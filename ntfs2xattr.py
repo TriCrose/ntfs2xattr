@@ -261,9 +261,7 @@ def walk_and_copy(src_dir: str, dest_dir: str,
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Copy NTFS files, preserving creation time in xattrs "
-                    "and logging activity with progress indicators.")
+    parser = argparse.ArgumentParser(description="Copy a directory from an NTFS volume, preserving crtime via xattrs on each file.")
     parser.add_argument("--src", required=True, help="Source directory on NTFS mount")
     parser.add_argument("--dest", required=True, help="Destination directory")
     parser.add_argument("--no-log", action="store_true", help="Disable logging")
