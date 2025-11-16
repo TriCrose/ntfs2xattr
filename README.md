@@ -56,9 +56,9 @@ For example:
 ```
 python3 ntfs2xattr.py --src /media/windows/7826D16A26D129C0/Users/John/Documents --dest ~/Documents
 ```
-Each invocation of the script creates a separate log file (in `logs/`) whose filename corresponds to the time of invocation. All the information that printed to the terminal is also available in the logs (and in more detail), so it's worth keeping the log files around even after the copy is complete. Log lines have an associated log level (`INFO`, `WARNING` or `ERROR`), making it trivial to, for example, `grep` for all error or warning lines.
+Each invocation of the script creates a separate log file (in `logs/`) whose filename corresponds to the time of invocation. All of the information printed to the terminal is also written to the logs (in more detail), so it's worth keeping the log files around even after the copy is complete. Log lines have an associated log level (`INFO`, `WARNING` or `ERROR`), making it trivial to, for example, `grep` for all error or warning lines.
 
-Copying errors can arise when trying to copy certain Windows system files due to quirks of how the OS works (e.g. the empty `python.exe` that just opens the Microsoft Store). However, personal documents, images, videos, etc. should be able to copy with no issues.
+Errors can arise when trying to copy certain Windows system files due to quirks of how the OS works (e.g. the empty `python.exe` that just opens the Microsoft Store). However, personal documents, images, videos, etc. should be able to copy with no issues.
 
 The [Nemo extension](#nemo-extension) section below describes how to inspect each file's extended attributes in the file browser, however you can also do so via the terminal using the `xattr` package (install with `sudo apt install xattr`):
 ```
