@@ -1,5 +1,5 @@
 # ntfs2xattr
-A couple of scripts to help make the process of moving from Windows to Linux a just little bit easier. 🐧
+A couple of scripts to help make the process of moving from Windows to Linux just a little bit easier. 🐧
 
 `ntfs2xattr.py` copies a directory from an NTFS-formatted drive/partition to ext4 while preserving the crtime (NTFS-only) by adding it as an extended attribute to each file ext4. It actually adds two xattrs:
 * `user.ntfs_crtime`
