@@ -1,4 +1,5 @@
 # ntfs2xattr
+![Screenshot](img/banner.png)
 A couple of scripts to make the process of moving from Windows to Linux just a little bit easier. 😊 🤝 🐧
 
 `ntfs2xattr.py` copies a directory from an NTFS-formatted volume to ext4 while preserving the crtime (NTFS-only) by adding it as an extended attribute to each file. It actually adds two xattrs:
@@ -37,7 +38,7 @@ nemo -q
 ```
 
 ## Usage
-Looking at the output of `python ntfs2xattr.py -h`:
+From `python ntfs2xattr.py -h`:
 ```
 usage: ntfs2xattr.py [-h] --src SRC --dest DEST [--no-log] [--no-verify]
 
@@ -50,15 +51,15 @@ options:
   --no-log     Disable logging
   --no-verify  Disable verification of file count
 ```
-It's fairly self-explanatory. As an example, your command could look something like:
+For example:
 ```
 python3 ntfs2xattr.py --src /media/windows/7826D16A26D129C0/Users/John/Documents --dest ~/Documents
 ```
-Upon running the script, it first counts the number of files in the source directory (used for the verification step at the end), before then beginning to copy all the files and set the xattr on each one. It prints the name and the extracted timestamp both to the terminal (with a progress bar along the bottom) and to a local `.log` file in the `logs/` directory. Each invocation of the script gets its own log file in this directory with a filename corresponding to the time of invocation.
+Each invocation of the script creates a separate log file (in `logs/`) whose filename corresponds to the time of invocation. All the information that printed to the terminal is also available in the logs (and in more detail), so it's worth keeping the log files around even after the copy is complete. Log lines have an associated log level (`INFO`, `WARNING` or `ERROR`), making it trivial to, for example, `grep` for all error or warning lines.
 
-Once copying is finished, the number of files in the target directory is counted and compared with the original source count. If they do not match, the script will print out the name of each file that didn't copy as well as the associated error message. This information is also available in the logs (try `grep`ing for "WARNING" or "ERROR"). The most common cases of failed copies, however, are Windows system files that don't play well with the Linux environment or that behave strangely due to quirks of the OS. Your personal documents, images, videos etc. are unlikely to have any issues.
+Copying errors can arise when trying to copy certain Windows system files due to quirks of how the OS works (e.g. the empty `python.exe` that just opens the Microsoft Store). However, personal documents, images, videos, etc. should be able to copy with no issues.
 
-Aside from using the Nemo extension, you can also inspect the extended attributes from the command-line using the `xattr` package (`sudo apt install xattr`):
+The [Nemo extension](#nemo-extension) section below describes how to inspect each file's extended attributes in the file browser, however you can also do so via the terminal using the `xattr` package (install with `sudo apt install xattr`):
 ```
 ~/Documents$ xattr -l Documents/novel.docx
 user.ntfs_crtime:
