@@ -58,9 +58,12 @@ options:
     - how to check which files didn't copy (grepping logs for ERROR/WARNING)
 
 Also, if you install the `attr` package (`sudo apt install attr`), you can view extended attributes in the terminal with `xattr -l <file>`:
-```bash
-xattr -l myfile.txt
-(add output here)
+```
+~ > xattr -l Documents/novel.docx
+user.ntfs_crtime:
+0000   DE C1 13 61 78 51 DC 01                            ...axQ..
+
+user.ntfs_crtime_readable: 2025-11-09 21:57:18
 ```
 
 ### Nemo extension
@@ -73,6 +76,8 @@ Once installed, you can view any xattrs a file has via file the "Extended Attrib
 You can also add the "Date Created (NTFS)" column to the file browser column headers:
 
 ![Column Headers Screenshot](img/column_headers.png)
+
+Though this will only set it for the current directory. To apply it across all directories, you can go to `Edit->Preferences->List Columns` and add it there.
 
 ## Tests
 ### Unit tests

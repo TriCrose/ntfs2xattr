@@ -38,10 +38,11 @@ def day_with_suffix(day: int) -> str:
 
 
 def format_timestamp_local(dt_utc: datetime.datetime) -> str:
+    """
+    Format as: YYYY-MM-DD HH:MM:SS (ISO 8601, sorts chronologically)
+    """
     dt_local = dt_utc.astimezone()
-    day_str = day_with_suffix(dt_local.day)
-    month_str = dt_local.strftime("%B")
-    return f"{day_str} {month_str} {dt_local.year} at {dt_local:%H:%M}"
+    return dt_local.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_ntfs_crtime_with_raw(path: str) -> Tuple[Optional[datetime.datetime],

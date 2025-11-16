@@ -23,34 +23,16 @@ def filetime_to_datetime(filetime: int) -> datetime.datetime:
 
 def format_timestamp_local(dt_utc: datetime.datetime) -> str:
     """
-    Format as: Sun 09 Nov HH:MM:SS (24-hour)
+    Format as: YYYY-MM-DD HH:MM:SS (ISO 8601, sorts chronologically)
     """
     dt_local = dt_utc.astimezone()
-    return dt_local.strftime("%a %d %b %H:%M:%S")
+    return dt_local.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def get_ntfs_crtime_string(path: str) -> str:
     """
     Return human-readable NTFS crtime string for a given file, or '' if not present.
-    Priority:
-      1. user.ntfs_crtime_readable (UTF-8 string)
-      2. user.ntfs_crtime (8-byte FILETIME or hex)
     """
-    # 1) Try the readable xattr first
-    try:
-        raw_readable = os.getxattr(path, ATTR_READABLE)
-        try:
-            txt = raw_readable.decode("utf-8").strip()
-            if txt:
-                # We *could* re-parse and reformat, but assume it's ok or return as-is.
-                # To force the new format, we could try to parse, but that’s brittle.
-                return txt
-        except Exception:
-            pass
-    except OSError:
-        pass
-
-    # 2) Fall back to raw FILETIME bytes / hex
     try:
         raw = os.getxattr(path, ATTR_RAW)
     except OSError:
@@ -61,19 +43,6 @@ def get_ntfs_crtime_string(path: str) -> str:
         filetime_int = int.from_bytes(raw, "little", signed=False)
         dt = filetime_to_datetime(filetime_int)
         return format_timestamp_local(dt)
-
-    # Try ASCII hex
-    try:
-        text = raw.decode("ascii").strip()
-        if text.startswith(("0x", "0X")):
-            hex_part = text[2:]
-        else:
-            hex_part = text
-        filetime_int = int(hex_part, 16)
-        dt = filetime_to_datetime(filetime_int)
-        return format_timestamp_local(dt)
-    except Exception:
-        return ""
 
 
 class NTFSCRTimeExtension(GObject.GObject,
