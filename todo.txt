@@ -1,0 +1,4 @@
+Actually check the source is NTFS and the dest is ext4 before doing anything
+Finish README.md (with images)
+Switch the priority of readable/raw for the nemo extension
+Write tests
