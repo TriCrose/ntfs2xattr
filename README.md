@@ -81,7 +81,3 @@ You can also add the "Date Created (NTFS)" column to the file browser column hea
 ![Column Headers Screenshot](img/column_headers.png)
 
 Though this will only set it for the current directory. To apply it across all directories, you can go to `Edit->Preferences->List Columns` and add it there.
-
-## Tests
-### Unit tests
-### E2E
