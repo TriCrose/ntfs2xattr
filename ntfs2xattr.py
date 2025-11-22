@@ -29,14 +29,6 @@ def filetime_to_datetime(filetime: int) -> datetime.datetime:
                                                microseconds=microseconds)
 
 
-def day_with_suffix(day: int) -> str:
-    if 11 <= day % 100 <= 13:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return f"{day}{suffix}"
-
-
 def format_timestamp_local(dt_utc: datetime.datetime) -> str:
     """
     Format as: YYYY-MM-DD HH:MM:SS (ISO 8601, sorts chronologically)
